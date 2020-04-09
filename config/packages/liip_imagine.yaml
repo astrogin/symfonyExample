@@ -1,0 +1,38 @@
+# See dos how to configure the bundle: https://symfony.com/doc/current/bundles/LiipImagineBundle/basic-usage.html
+liip_imagine:
+    # valid drivers options include "gd" or "gmagick" or "imagick"
+    driver: "gd"
+
+    resolvers:
+        mws_resolver:
+            web_path:
+                # use %kernel.project_dir%/web for Symfony prior to 4.0.0
+                web_root: "%kernel.project_dir%/public"
+                cache_prefix: "media/cache"
+
+    filter_sets:
+        cache: ~
+        mws:
+            data_loader: stream.products_images
+            cache: mws_resolver
+            filters:
+                #grayscale: ~
+                background:
+
+                    # set the background color to #00ffff
+                    color: '#ff0000'
+
+                    # set a size different from the input image
+                    #size: [1300, 716]
+
+                    # center input image on the newly created background
+                    position: center
+                    #transparency: 0
+
+                fixed:
+
+                        # set the fixed size to "120x90" pixels
+                    width: 1100
+                    height: 1000
+
+                test_filter:

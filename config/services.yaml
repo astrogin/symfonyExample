@@ -1,0 +1,70 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+parameters:
+  app.skazka.api.base_url: '%env(SKAZKA_API_URL)%'
+  app.storage.path: '/var/storage'
+  env.merchant: '%env(MERCHANT_ID)%'
+  app.marketplace.id.list: ['ATVPDK']
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        bind:
+          string $key: '%env(AWS_ACCESS_KEY_ID)%'
+          string $secret: '%env(AWS_SECRET_ACCESS_KEY)%'
+          string $merchant: '%env(MERCHANT_ID)%'
+          string $appName: '%env(MWS_APP_NAME)%'
+          string $appVersion: '%env(MWS_APP_VERSION)%'
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/*'
+        exclude:
+          - '../src/{DependencyInjection,Entity,Migrations,Tests,Kernel.php}'
+          - '../src/MwsClients/Feed/MarketplaceWebService_Examples'
+
+    # controllers are imported separately to make sure services can be injected
+    # as action arguments even if you don't extend any base controller class
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
+
+    feed.container:
+      class: App\MwsClients\Feed\Container
+      public: true
+      arguments:
+        $feedHandler: '@App\MwsClients\Feed\Handlers\FeedHandler'
+
+    App\Listeners\Feed\SendProductFeedToMWS:
+      tags:
+        - { name: 'kernel.event_listener', event: feed.products.created.event}
+    App\Listeners\Feed\CreateProductImageFeed:
+      tags:
+        - { name: 'kernel.event_listener', event: feed.product.success.event}
+    App\Listeners\Feed\CreateProductPriceFeed:
+      tags:
+        - { name: 'kernel.event_listener', event: feed.product.success.event}
+    App\Listeners\Feed\CreateProductInventoryFeed:
+      tags:
+        - { name: 'kernel.event_listener', event: feed.product.success.event}
+
+    app.filter.test_filter:
+      class: App\Services\Image\Filters\MWSFilter
+      tags:
+        - { name: "liip_imagine.filter.loader", loader: test_filter }
+
+    app.liip_imagine.binary.loader.stream.products_images:
+      class: Liip\ImagineBundle\Binary\Loader\StreamLoader
+      arguments:
+        - 'http://cdn.skazka.site/storage/images/products/'
+      tags:
+        - { name: 'liip_imagine.binary.loader', loader: 'stream.products_images' }
